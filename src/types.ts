@@ -10,6 +10,12 @@ export interface Subtopic {
   title: string;
   completedByUserIds: string[]; // list of user ids who marked it completed
   notes?: string;
+  theory?: string;
+  algorithm?: string;
+  practiceUrl?: string;
+  resourceDocUrl?: string;
+  resourceVideoUrl?: string;
+  isStarred?: boolean;
   createdAt: number;
 }
 

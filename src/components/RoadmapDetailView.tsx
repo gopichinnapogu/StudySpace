@@ -14,7 +14,9 @@ import {
   Edit2,
   Edit3,
   Check,
-  X
+  X,
+  Star,
+  FileText
 } from 'lucide-react';
 import { EditTopicModal } from './EditTopicModal';
 import { EditRoadmapModal } from './EditRoadmapModal';
@@ -32,6 +34,8 @@ interface RoadmapDetailViewProps {
   onUpdateTopic: (roadmapId: string, topicId: string, newTitle: string, newDesc?: string, updatedSubtopics?: { id: string; title: string; completedByUserIds: string[] }[]) => void;
   onUpdateRoadmap: (roadmapId: string, title: string, description?: string) => void;
   onOpenRevisionImagesForTopic?: (roadmapId: string, topicId: string) => void;
+  onOpenNotesModal?: (roadmapTitle: string, topicTitle: string, subtopic: Subtopic) => void;
+  onToggleStar?: (roadmapId: string, topicId: string, subtopicId: string) => void;
 }
 
 export const RoadmapDetailView: React.FC<RoadmapDetailViewProps> = ({
@@ -47,6 +51,8 @@ export const RoadmapDetailView: React.FC<RoadmapDetailViewProps> = ({
   onUpdateTopic,
   onUpdateRoadmap,
   onOpenRevisionImagesForTopic,
+  onOpenNotesModal,
+  onToggleStar,
 }) => {
   const [inlineSubtopicTitle, setInlineSubtopicTitle] = useState<{ [topicId: string]: string }>({});
   const [addingToTopicId, setAddingToTopicId] = useState<string | null>(null);
@@ -337,6 +343,49 @@ export const RoadmapDetailView: React.FC<RoadmapDetailViewProps> = ({
                         </div>
 
                         <div className="flex items-center gap-1.5 shrink-0 ml-2">
+                          {/* Notes, Theory & Algorithm trigger */}
+                          {onOpenNotesModal && (
+                            <button
+                              id={`notes-subtopic-${sub.id}`}
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onOpenNotesModal(roadmap.title, topic.title, sub);
+                              }}
+                              className={`p-1 rounded transition-colors flex items-center gap-1 text-xs ${
+                                (sub.theory || sub.algorithm || sub.notes)
+                                  ? 'text-amber-600 bg-amber-50 hover:bg-amber-100 font-medium'
+                                  : 'text-neutral-400 hover:text-neutral-800 hover:bg-neutral-100'
+                              }`}
+                              title="View & Edit Notes, Theory, Algorithm"
+                            >
+                              <FileText className="w-3.5 h-3.5" />
+                              {(sub.theory || sub.algorithm) && (
+                                <span className="text-[10px] hidden sm:inline">Notes</span>
+                              )}
+                            </button>
+                          )}
+
+                          {/* Star for Revision */}
+                          {onToggleStar && (
+                            <button
+                              id={`star-subtopic-${sub.id}`}
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onToggleStar(roadmap.id, topic.id, sub.id);
+                              }}
+                              className={`p-1 rounded transition-colors ${
+                                sub.isStarred
+                                  ? 'text-amber-500 fill-amber-500 hover:text-amber-600'
+                                  : 'text-neutral-300 hover:text-amber-400 hover:bg-neutral-100'
+                              }`}
+                              title={sub.isStarred ? 'Starred for revision' : 'Star for revision'}
+                            >
+                              <Star className={`w-3.5 h-3.5 ${sub.isStarred ? 'fill-amber-400' : ''}`} />
+                            </button>
+                          )}
+
                           <span className="text-[11px] text-neutral-400 font-mono">
                             {isDone ? 'Studied' : 'Pending'}
                           </span>

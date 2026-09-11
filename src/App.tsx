@@ -29,6 +29,7 @@ import { AddRoadmapModal } from './components/AddRoadmapModal';
 import { AddContentModal } from './components/AddContentModal';
 import { UploadImageModal } from './components/UploadImageModal';
 import { ImageViewerModal } from './components/ImageViewerModal';
+import { TopicNotesModal } from './components/TopicNotesModal';
 
 export const App: React.FC = () => {
   // State management
@@ -55,6 +56,13 @@ export const App: React.FC = () => {
   const [isAddContentOpen, setIsAddContentOpen] = useState<boolean>(false);
   const [isUploadImageOpen, setIsUploadImageOpen] = useState<boolean>(false);
   const [activeViewerImage, setActiveViewerImage] = useState<RevisionImage | null>(null);
+  const [activeNotesItem, setActiveNotesItem] = useState<{
+    roadmapTitle: string;
+    topicTitle: string;
+    subtopic: Subtopic;
+    roadmapId: string;
+    topicId: string;
+  } | null>(null);
 
   // Filters for revision images modal / view
   const [revisionFilterRoadmapId, setRevisionFilterRoadmapId] = useState<string>('all');
@@ -381,6 +389,125 @@ export const App: React.FC = () => {
     );
   };
 
+  // Theory, Algorithm & Notes handling
+  const handleOpenNotesModal = (
+    roadmapTitle: string,
+    topicTitle: string,
+    subtopic: Subtopic
+  ) => {
+    let foundRmId = '';
+    let foundTopicId = '';
+    for (const rm of userRoadmaps) {
+      for (const t of rm.topics) {
+        if (t.subtopics.some((s) => s.id === subtopic.id)) {
+          foundRmId = rm.id;
+          foundTopicId = t.id;
+          break;
+        }
+      }
+      if (foundRmId) break;
+    }
+
+    setActiveNotesItem({
+      roadmapTitle,
+      topicTitle,
+      subtopic,
+      roadmapId: foundRmId,
+      topicId: foundTopicId,
+    });
+  };
+
+  const handleUpdateSubtopicDetails = (
+    roadmapId: string,
+    topicId: string,
+    subtopicId: string,
+    updates: Partial<Subtopic>
+  ) => {
+    setUserRoadmaps((prev) =>
+      prev.map((rm) => {
+        if (rm.id === roadmapId) {
+          return {
+            ...rm,
+            topics: rm.topics.map((t) => {
+              if (t.id === topicId) {
+                return {
+                  ...t,
+                  subtopics: t.subtopics.map((s) =>
+                    s.id === subtopicId ? { ...s, ...updates } : s
+                  ),
+                };
+              }
+              return t;
+            }),
+          };
+        }
+        return rm;
+      })
+    );
+  };
+
+  const handleSaveNotesModal = (subtopicId: string, updates: Partial<Subtopic>) => {
+    if (!activeNotesItem) return;
+    handleUpdateSubtopicDetails(
+      activeNotesItem.roadmapId,
+      activeNotesItem.topicId,
+      subtopicId,
+      updates
+    );
+    setActiveNotesItem((prev) =>
+      prev ? { ...prev, subtopic: { ...prev.subtopic, ...updates } } : null
+    );
+  };
+
+  const handleToggleSubtopicStar = (
+    roadmapId: string,
+    topicId: string,
+    subtopicId: string
+  ) => {
+    setUserRoadmaps((prev) =>
+      prev.map((rm) => {
+        if (rm.id === roadmapId) {
+          return {
+            ...rm,
+            topics: rm.topics.map((t) => {
+              if (t.id === topicId) {
+                return {
+                  ...t,
+                  subtopics: t.subtopics.map((s) =>
+                    s.id === subtopicId ? { ...s, isStarred: !s.isStarred } : s
+                  ),
+                };
+              }
+              return t;
+            }),
+          };
+        }
+        return rm;
+      })
+    );
+  };
+
+  const handleAddTopicToRoadmap = (roadmapId: string, title: string) => {
+    const newTopic: Topic = {
+      id: `topic_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+      title: title.trim(),
+      subtopics: [],
+      createdAt: Date.now(),
+    };
+
+    setUserRoadmaps((prev) =>
+      prev.map((rm) => {
+        if (rm.id === roadmapId) {
+          return {
+            ...rm,
+            topics: [...rm.topics, newTopic],
+          };
+        }
+        return rm;
+      })
+    );
+  };
+
   // Revision Images Actions
   const handleUploadImage = (newImage: RevisionImage) => {
     setUserRevisionImages((prev) => [newImage, ...prev]);
@@ -448,6 +575,10 @@ export const App: React.FC = () => {
               setActiveView('revision-images');
             }}
             onOpenImageViewer={(image) => setActiveViewerImage(image)}
+            onOpenNotesModal={handleOpenNotesModal}
+            onToggleStar={handleToggleSubtopicStar}
+            onAddSubtopic={handleAddSingleSubtopic}
+            onAddTopic={handleAddTopicToRoadmap}
           />
         )}
 
@@ -479,6 +610,8 @@ export const App: React.FC = () => {
             onUpdateTopic={handleUpdateTopic}
             onUpdateRoadmap={handleUpdateRoadmap}
             onOpenRevisionImagesForTopic={handleOpenRevisionImagesFromTopic}
+            onOpenNotesModal={handleOpenNotesModal}
+            onToggleStar={handleToggleSubtopicStar}
           />
         )}
 
@@ -555,6 +688,16 @@ export const App: React.FC = () => {
         roadmapTitle={activeViewerRoadmap?.title}
         topicTitle={activeViewerTopic?.title}
         onClose={() => setActiveViewerImage(null)}
+      />
+
+      {/* 5. Theory, Algorithm & Notes Modal */}
+      <TopicNotesModal
+        isOpen={!!activeNotesItem}
+        roadmapTitle={activeNotesItem?.roadmapTitle}
+        topicTitle={activeNotesItem?.topicTitle}
+        subtopic={activeNotesItem?.subtopic || null}
+        onClose={() => setActiveNotesItem(null)}
+        onSave={handleSaveNotesModal}
       />
     </div>
   );
